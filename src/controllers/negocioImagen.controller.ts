@@ -3,6 +3,7 @@ import { supabase } from "../config/supabase";
 import * as service from "../services/negocioImagen.service";
 import { BaseResponse } from "../shared/base-response";
 
+
 export const subirImagen = async (req: Request, res: Response) => {
   try {
     // const file = req.file; // viene de multer
@@ -44,6 +45,57 @@ export const subirImagen = async (req: Request, res: Response) => {
   }
 };
 
+
+export const actualizarImagen = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const file = (req as any).file;
+    const { descripcion } = req.body;
+
+    if (!file) {
+      return res.status(400).json(BaseResponse.error("No se recibió ningún archivo"));
+    }
+
+    // Buscar la imagen existente
+    const imagenExistente = await service.obtenerPorId(id);
+    if (!imagenExistente) {
+      return res.status(404).json(BaseResponse.error("Imagen no encontrada"));
+    }
+
+    // 1. Eliminar imagen anterior del storage (si existe)
+    if (imagenExistente.urlImagen) {
+      const path = imagenExistente.urlImagen.split("/storage/v1/object/public/negocios/")[1];
+      if (path) {
+        await supabase.storage.from("negocios").remove([path]);
+      }
+    }
+
+    // 2. Subir nueva imagen
+    const fileName = `negocios/${imagenExistente.negocio.idNegocio}/${Date.now()}_${file.originalname}`;
+    const { error } = await supabase.storage
+      .from("negocios")
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+      });
+
+    if (error) throw error;
+
+    // 3. Obtener URL pública
+    const { data: publicUrl } = supabase.storage
+      .from("negocios")
+      .getPublicUrl(fileName);
+
+    // 4. Actualizar en BD
+    await service.actualizar(id, {
+      urlImagen: publicUrl.publicUrl,
+      descripcion,
+    });
+
+    res.json(BaseResponse.success(null, "Imagen reemplazada correctamente"));
+  } catch (err: any) {
+    res.status(500).json(BaseResponse.error(err.message));
+  }
+};
 export const insertar = async (req: Request, res: Response) => {
   try {
     const creada = await service.insertar(req.body);
