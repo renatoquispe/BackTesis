@@ -1,7 +1,7 @@
 import 'dotenv/config';  
 import app, { startServer } from './app';
 
-const PORT = Number(process.env.PORT) || 8000;
+const PORT = Number(process.env.PORT) || 3000;
 
 startServer()
   .then(() => {
