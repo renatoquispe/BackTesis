@@ -99,30 +99,7 @@ export const verificarCodigoEmail = async (req: Request, res: Response): Promise
         res.status(500).json(BaseResponse.error("Error al verificar código"));
     }
 };
-// export const verificarCodigoEmail = async (req: Request, res: Response): Promise<void> => {
-//     const { correo, codigo } = req.body;
 
-//     if (!correo || !codigo) {
-//         res.status(400).json(BaseResponse.error("Correo y código requeridos"));
-//         return;
-//     }
-
-//     try {
-//         const esValido = await verificationService.verificarCodigoEmail(correo, codigo);
-        
-//         if (esValido) {
-//             res.status(200).json(BaseResponse.success(
-//                 null,
-//                 "Email verificado correctamente"
-//             ));
-//         } else {
-//             res.status(400).json(BaseResponse.error("Código inválido o expirado"));
-//         }
-//     } catch (error: any) {
-//         console.error("Error en verificar código email:", error);
-//         res.status(500).json(BaseResponse.error("Error al verificar código"));
-//     }
-// };
 // Solicitar código de recuperación
 export const solicitarRecuperacionContrasena = async (req: Request, res: Response): Promise<void> => {
     const { correo } = req.body;

@@ -3,7 +3,8 @@ import { Usuario } from "../entities/usuario";
 import { OAuth2Client, TokenPayload } from "google-auth-library";
 import jwt, { SignOptions } from "jsonwebtoken";
 import { VerificationService } from "../services/verificacion.service"; // 👈 AGREGAR
-
+import bcrypt from "bcrypt";
+import jwtDecode from "jwt-decode"; 
 
 // Cliente de Google para verificar idTokens
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID!);
@@ -22,7 +23,13 @@ export const login = async (
     relations: ["negocio"],   // 👈 aquí ya traes los negocios
   });
   if (!usuario) return null;
-  return usuario.contrasena === contrasena ? usuario : null;
+
+  // return usuario.contrasena === contrasena ? usuario : null;
+  // Comparar contraseña ingresada vs hash almacenado
+  const passwordValido = await bcrypt.compare(contrasena, usuario.contrasena);
+  if (!passwordValido) return null;
+
+  return usuario;
 };
 /* ===============  REGISTRO NORMAL (nuevo método)  =============== */
 // En la función crearUsuario - AGREGAR MÁS LOGS:
@@ -58,14 +65,17 @@ export const crearUsuario = async (
   }
 
   console.log(`🔍 [AUTH SERVICE] Creando nuevo usuario con estadoAuditoria: 0`);
-
+  // 1. Generar hash
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(contrasena, saltRounds);
   // Crear nuevo usuario con estado NO verificado
   const usuario = repo.create({
     nombre,
     apellidoPaterno,
     apellidoMaterno,
     correo: correo.trim().toLowerCase(),
-    contrasena,
+    // contrasena,
+    contrasena: hashedPassword,   // <--- AQUÍ
     fechaNacimiento: new Date(fechaNacimiento),
     fotoPerfil,
     estadoAuditoria: 0
@@ -114,143 +124,6 @@ export const crearUsuario = async (
   console.log(`✅ [AUTH SERVICE] ========== FIN CREAR USUARIO ==========`);
   return usuarioGuardado;
 };
-// export const crearUsuario = async (
-//   nombre: string,
-//   correo: string,
-//   contrasena: string,
-//   apellidoPaterno: string = "",
-//   apellidoMaterno: string = "",
-//   fechaNacimiento: string = "2000-01-01",
-//   fotoPerfil: string | null = null
-// ): Promise<Usuario> => {
-//   if (!AppDataSource.isInitialized) {
-//     await AppDataSource.initialize();
-//   }
-  
-//   const repo = AppDataSource.getRepository(Usuario);
-  
-//   // Verificar si el usuario ya existe
-//   const usuarioExistente = await repo.findOne({ 
-//     where: { correo: correo.trim().toLowerCase() } 
-//   });
-  
-//   if (usuarioExistente) {
-//     throw new Error("Ya existe un usuario con este correo");
-//   }
-
-//   // Crear nuevo usuario con estado NO verificado
-//   const usuario = repo.create({
-//     nombre,
-//     apellidoPaterno,
-//     apellidoMaterno,
-//     correo: correo.trim().toLowerCase(),
-//     contrasena,
-//     fechaNacimiento: new Date(fechaNacimiento),
-//     fotoPerfil,
-//     estadoAuditoria: 0
-//   } as Partial<Usuario>);
-
-//   const usuarioGuardado = await repo.save(usuario);
-//   console.log(`✅ Usuario guardado en BD con ID: ${usuarioGuardado.idUsuario}, estado: ${usuarioGuardado.estadoAuditoria}`);
-
-//   // 👇 ENVIAR CÓDIGO DE VERIFICACIÓN AUTOMÁTICAMENTE DESPUÉS DEL REGISTRO
-//   try {
-//     console.log(`📧 [1/4] Iniciando envío de código a: ${correo}`);
-    
-//     console.log(`📧 [2/4] Llamando a verificationService.solicitarVerificacionEmail...`);
-//     const codigo = await verificationService.solicitarVerificacionEmail(correo);
-//     console.log(`📧 [3/4] Código generado: ${codigo}`);
-    
-//     const mensaje = `
-//       <p>¡Bienvenido/a!</p>
-//       <p>Gracias por registrarte. Usa el siguiente código para verificar tu email:</p>
-//       <div class="code">${codigo}</div>
-//       <p>Este código expirará en <strong>15 minutos</strong>.</p>
-//       <p>Si no te registraste, por favor ignora este mensaje.</p>
-//     `;
-
-//     console.log(`📧 [4/4] Llamando a verificationService.enviarEmail...`);
-//     await verificationService.enviarEmail(
-//       correo,
-//       "Verifica tu Email - Tu Código de Verificación",
-//       mensaje
-//     );
-
-//     console.log(`✅ Código de verificación enviado exitosamente a: ${correo}`);
-//   } catch (error: any) {
-//     console.error("❌ ERROR CRÍTICO al enviar código de verificación:", error);
-//     console.error("❌ Stack trace:", error.stack);
-//     // NO lanzamos error aquí para no afectar el registro
-//   }
-
-//   return usuarioGuardado;
-// };
-// export const crearUsuario = async (
-//   nombre: string,
-//   correo: string,
-//   contrasena: string,
-//   apellidoPaterno: string = "",
-//   apellidoMaterno: string = "",
-//   fechaNacimiento: string = "2000-01-01",
-//   fotoPerfil: string | null = null
-// ): Promise<Usuario> => {
-//   if (!AppDataSource.isInitialized) {
-//     await AppDataSource.initialize();
-//   }
-  
-//   const repo = AppDataSource.getRepository(Usuario);
-  
-//   // Verificar si el usuario ya existe
-//   const usuarioExistente = await repo.findOne({ 
-//     where: { correo: correo.trim().toLowerCase() } 
-//   });
-  
-//   if (usuarioExistente) {
-//     throw new Error("Ya existe un usuario con este correo");
-//   }
-
-//   // Crear nuevo usuario con estado NO verificado
-//   const usuario = repo.create({
-//     nombre,
-//     apellidoPaterno,
-//     apellidoMaterno,
-//     correo: correo.trim().toLowerCase(),
-//     contrasena,
-//     fechaNacimiento: new Date(fechaNacimiento),
-//     fotoPerfil,
-//     estadoAuditoria: 0 // 👈 IMPORTANTE: Creado como NO verificado
-//   } as Partial<Usuario>);
-
-//   const usuarioGuardado = await repo.save(usuario);
-
-//   // 👇 ENVIAR CÓDIGO DE VERIFICACIÓN AUTOMÁTICAMENTE DESPUÉS DEL REGISTRO
-//   try {
-//     console.log(`📧 Enviando código de verificación a: ${correo}`);
-//     const codigo = await verificationService.solicitarVerificacionEmail(correo);
-    
-//     const mensaje = `
-//       <p>¡Bienvenido/a!</p>
-//       <p>Gracias por registrarte. Usa el siguiente código para verificar tu email:</p>
-//       <div class="code">${codigo}</div>
-//       <p>Este código expirará en <strong>15 minutos</strong>.</p>
-//       <p>Si no te registraste, por favor ignora este mensaje.</p>
-//     `;
-
-//     await verificationService.enviarEmail(
-//       correo,
-//       "Verifica tu Email - Tu Código de Verificación",
-//       mensaje
-//     );
-
-//     console.log(`✅ Código de verificación enviado a: ${correo}`);
-//   } catch (error) {
-//     console.error("❌ Error al enviar código de verificación:", error);
-//     // NO lanzamos error aquí para no afectar el registro
-//     // El usuario puede solicitar otro código más tarde
-//   }
-
-//   return usuarioGuardado;
-// };
 
 /* =====================  GOOGLE SIGN-IN  ===================== */
 
@@ -348,10 +221,15 @@ export async function buildAuthResponse(usuario: Usuario) {
     id: usuario.idUsuario,
     email: usuario.correo,
   });
+   // Decodificar token para obtener expiración
+    const decoded: any = jwt.decode(token); 
+    const expiryTimestamp = decoded.exp * 1000; // convertir a ms para Android
+
     const negocioId = usuario.negocio ? usuario.negocio.idNegocio : null;
 
   return {
     token,
+    expiry: expiryTimestamp,  // <--- agregado
     usuario: {
       idUsuario: usuario.idUsuario,
       nombre: usuario.nombre,

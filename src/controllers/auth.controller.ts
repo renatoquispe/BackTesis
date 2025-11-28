@@ -8,42 +8,6 @@ import {
   buildAuthResponse,
 } from "../services/auth.service";
 
-// export const login = async (req: Request, res: Response): Promise<void> => {
-//   const { correo, contrasena } = req.body;
-
-//   if (!correo || !contrasena) {
-//     res.status(400).json(BaseResponse.error("Correo y contraseña requeridos"));
-//     return;
-//   }
-
-//   try {
-//     const usuario = await authService.login(correo, contrasena);
-
-//     if (!usuario) {
-//       res.status(404).json(BaseResponse.error("Usuario o contraseña incorrectos"));
-//       return;
-//     }
-//     const data = await authService.buildAuthResponse(usuario);
-
-//     // Generar el token
-//     // const token = generarToken(usuario);
-//     res.status(200).json(BaseResponse.success(
-//       // {
-//       //   token,
-//       //   usuario: {
-//       //     idUsuario: usuario.idUsuario,
-//       //     correo: usuario.correo,
-//       //   }
-//       // },
-//       data,
-//       "Inicio de sesión exitoso"
-//     ));
-//   } catch (error: any) {
-//     console.error("Error en login:", error);
-//     res.status(500).json(BaseResponse.error("Error en el servidor"));
-//   }
-// };
-
 export const login = async (req: Request, res: Response): Promise<void> => {
   const { correo, contrasena } = req.body;
 
@@ -117,34 +81,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     res.status(400).json(BaseResponse.error(error.message || "Error al registrar usuario"));
   }
 };
-// export const register = async (req: Request, res: Response): Promise<void> => {
-//   const { nombre, correo, contrasena, apellidoPaterno, apellidoMaterno, fechaNacimiento, fotoPerfil } = req.body;
-
-//   if (!nombre || !correo || !contrasena) {
-//     res.status(400).json(BaseResponse.error("Nombre, correo y contraseña requeridos"));
-//     return;
-//   }
-
-//   try {
-//     const usuario = await authService.crearUsuario(
-//       nombre,
-//       correo,
-//       contrasena,
-//       apellidoPaterno,
-//       apellidoMaterno,
-//       fechaNacimiento,
-//       fotoPerfil
-//     );
-
-//     res.status(201).json(BaseResponse.success(
-//       { idUsuario: usuario.idUsuario, correo: usuario.correo },
-//       "Usuario registrado correctamente. Por favor verifica tu email."
-//     ));
-//   } catch (error: any) {
-//     console.error("Error en registro:", error);
-//     res.status(400).json(BaseResponse.error(error.message || "Error al registrar usuario"));
-//   }
-// };
 
 export const googleSignIn = async (req: Request, res: Response) => {
   try {
