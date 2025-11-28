@@ -1,25 +1,35 @@
 import { AppDataSource } from "../config/appdatasource";
 import { CodigoVerificacion } from "../entities/codigoVerificacion";
 import { Usuario } from "../entities/usuario";
-import * as nodemailer from 'nodemailer'; // 👈 CAMBIO 1
+// import * as nodemailer from 'nodemailer'; 
 import * as bcrypt from "bcryptjs";
+import sgMail from "@sendgrid/mail";
+
 
 export class VerificationService {
     private transporter: any; // 
     constructor() {
-        console.log(`🔐 [VerificationService] Inicializando con Gmail SMTP`);
+    console.log("🔐 [VerificationService] Inicializando con SendGrid");
+
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+
+    console.log("✅ [VerificationService] SendGrid configurado");
+}
+
+    // constructor() {
+    //     console.log(`🔐 [VerificationService] Inicializando con Gmail SMTP`);
         
-        // 👇 CAMBIO 3 - Configuración Gmail
-        this.transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.GMAIL_USER,
-                pass: process.env.GMAIL_APP_PASSWORD
-            }
-        });
+    //     // 👇 CAMBIO 3 - Configuración Gmail
+    //     this.transporter = nodemailer.createTransport({
+    //         service: 'gmail',
+    //         auth: {
+    //             user: process.env.GMAIL_USER,
+    //             pass: process.env.GMAIL_APP_PASSWORD
+    //         }
+    //     });
         
-        console.log(`✅ [VerificationService] Gmail SMTP configurado`);
-    }
+    //     console.log(`✅ [VerificationService] Gmail SMTP configurado`);
+    // }
 
     // Generar código de 6 dígitos
     private generarCodigo(): string {
@@ -28,22 +38,42 @@ export class VerificationService {
 
     // 👇 CAMBIO 4 - SOLO ESTE MÉTODO CAMBIA COMPLETAMENTE
     async enviarEmail(correo: string, asunto: string, mensaje: string): Promise<void> {
-        try {
-            console.log(`📧 [enviarEmail] Enviando a: ${correo}`);
-            
-            const info = await this.transporter.sendMail({
-                from: '"Tu App" <susanarbaizodelacruz@gmail.com>', // 👈 Cambia por tu Gmail real
-                to: correo,
-                subject: asunto,
-                html: this.crearTemplateEmail(asunto, mensaje),
-            });
+    try {
+        console.log(`📧 [enviarEmail] Enviando a: ${correo}`);
 
-            console.log('✅ [enviarEmail] Email enviado con Gmail:', info.messageId);
-        } catch (error: any) {
-            console.error('❌ [enviarEmail] Error:', error);
-            throw new Error(`Error al enviar el código de verificación: ${error.message}`);
-        }
+        const msg = {
+            to: correo,
+            from: process.env.SENDGRID_FROM_EMAIL, 
+            subject: asunto,
+            html: this.crearTemplateEmail(asunto, mensaje),
+        };
+
+        await sgMail.send(msg);
+
+        console.log("✅ [enviarEmail] Email enviado con SendGrid");
+    } catch (error: any) {
+        console.error("❌ [enviarEmail] Error:", error);
+        throw new Error(`Error al enviar correo: ${error.message}`);
     }
+}
+
+    // async enviarEmail(correo: string, asunto: string, mensaje: string): Promise<void> {
+    //     try {
+    //         console.log(`📧 [enviarEmail] Enviando a: ${correo}`);
+            
+    //         const info = await this.transporter.sendMail({
+    //             from: '"Tu App" <susanarbaizodelacruz@gmail.com>', // 👈 Cambia por tu Gmail real
+    //             to: correo,
+    //             subject: asunto,
+    //             html: this.crearTemplateEmail(asunto, mensaje),
+    //         });
+
+    //         console.log('✅ [enviarEmail] Email enviado con Gmail:', info.messageId);
+    //     } catch (error: any) {
+    //         console.error('❌ [enviarEmail] Error:', error);
+    //         throw new Error(`Error al enviar el código de verificación: ${error.message}`);
+    //     }
+    // }
 
     // 👇 TODO ESTO QUEDA EXACTAMENTE IGUAL
     private crearTemplateEmail(asunto: string, mensaje: string): string {
