@@ -137,4 +137,3 @@ dist
 .pnp.*
 
 # Permitir subir el archivo .env
-!.env
