@@ -18,5 +18,4 @@ router.post("/:id/activar", controller.activar);
 router.delete("/:id", controller.desactivar);
 router.put("/:id/imagen", upload.single("imagen"), controller.actualizarImagen);
 
-
 export default router;

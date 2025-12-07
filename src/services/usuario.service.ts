@@ -1,12 +1,22 @@
 import AppDataSource from "../config/appdatasource";
 import { Usuario } from "../entities/usuario";
+import bcrypt from "bcrypt";
+
 
 const usuarioRepository = AppDataSource.getRepository(Usuario);
 
 // Insertar
+// export const insertarUsuario = async (usuario: Partial<Usuario>) => {
+//   return await usuarioRepository.save(usuario);
+// };
 export const insertarUsuario = async (usuario: Partial<Usuario>) => {
+  if (usuario.contrasena) {
+    usuario.contrasena = await bcrypt.hash(usuario.contrasena, 10);
+  }
+
   return await usuarioRepository.save(usuario);
 };
+
 
 // Listar todos
 export const listarUsuarios = async () => {
@@ -24,9 +34,31 @@ export const obtenerUsuarioPorId = async (id: number) => {
 };
 
 // Actualizar
+// export const actualizarUsuario = async (id: number, data: Partial<Usuario>) => {
+//   await usuarioRepository.update({ idUsuario: id }, data);
+// };
 export const actualizarUsuario = async (id: number, data: Partial<Usuario>) => {
-  await usuarioRepository.update({ idUsuario: id }, data);
+  const usuario = await usuarioRepository.findOne({ where: { idUsuario: id } });
+
+  if (!usuario) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  // Si llega una nueva contraseña, se hashea y NO se sobrescribe después
+  if (data.contrasena) {
+    usuario.contrasena = await bcrypt.hash(data.contrasena, 10);
+    delete data.contrasena; // <-- Esto evita que se reemplace con texto plano
+  }
+
+  // Asignar otros campos (excepto contraseña porque ya la quitamos)
+  Object.assign(usuario, data);
+
+  await usuarioRepository.save(usuario);
+
+  return usuario;
 };
+
+
 
 // Eliminar lógico (soft delete)
 export const eliminarUsuario = async (id: number) => {
